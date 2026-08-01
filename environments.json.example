@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "account": "111111111111",
+    "region": "us-east-1",
+    "journalSubdomain": "dev",
+    "mediaSubdomain": "cfmedia-dev",
+    "acmeEmail": "you@example.com"
+  },
+  "qa": {
+    "account": "222222222222",
+    "region": "us-east-1",
+    "journalSubdomain": "qa",
+    "mediaSubdomain": "cfmedia-qa",
+    "acmeEmail": "you@example.com"
+  },
+  "prod": {
+    "account": "333333333333",
+    "region": "us-east-1",
+    "journalSubdomain": "www",
+    "mediaSubdomain": "cfmedia-prod",
+    "acmeEmail": "you@example.com"
+  }
+}

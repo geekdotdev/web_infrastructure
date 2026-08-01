@@ -1,0 +1,13 @@
+node_modules/
+cdk.out/
+*.js
+!jest.config.js
+*.d.ts
+.cdk.staging/
+.env
+
+# Local account-number -> environment mapping; never commit.
+environments.json
+
+# CloudFront signing key pairs (private keys especially); never commit.
+keys/
