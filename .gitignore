@@ -1,3 +1,4 @@
+**/.DS_Store
 node_modules/
 cdk.out/
 *.js
@@ -11,3 +12,9 @@ environments.json
 
 # CloudFront signing key pairs (private keys especially); never commit.
 keys/
+
+# Per-env stack outputs (contain live IPs/domains); regenerated each deploy.
+deployment/outputs/
+
+# Local private artifacts pushed to the deployment bucket; never commit.
+private-config/

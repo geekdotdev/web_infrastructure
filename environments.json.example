@@ -15,6 +15,7 @@
   },
   "prod": {
     "account": "333333333333",
+    "profile": "333333333333_AdministratorAccess",
     "region": "us-east-1",
     "journalSubdomain": "www",
     "mediaSubdomain": "cfmedia-prod",

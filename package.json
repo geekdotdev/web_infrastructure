@@ -10,7 +10,7 @@
     "watch": "tsc -w",
     "cdk": "cdk",
     "synth": "cdk synth",
-    "deploy": "cdk deploy",
+    "deploy": "deployment/deploy.sh",
     "diff": "cdk diff"
   },
   "devDependencies": {

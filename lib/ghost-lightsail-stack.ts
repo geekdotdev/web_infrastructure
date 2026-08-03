@@ -17,6 +17,11 @@ export interface GhostLightsailStackProps extends cdk.StackProps {
   readonly journalDomainName: string;
   /** ACME registration email Caddy uses with Let's Encrypt. */
   readonly acmeEmail: string;
+  /**
+   * If non-empty, Caddy also serves this bare apex domain as a permanent
+   * redirect to the journal domain (prod only; '' disables).
+   */
+  readonly apexRedirectDomain?: string;
   /** CloudFront media subdomain for this env (cfmedia-<env>). */
   readonly mediaSubdomain: string;
   /** Full custom domain for the media distribution (cfmedia-<env>.geek.dev). */
@@ -77,6 +82,8 @@ export class GhostLightsailStack extends cdk.Stack {
       { key: 'env', value: envLabel },
     ];
 
+    const deploymentBucketName = `geek-dot-dev-deployment-resources-${envLabel}`;
+
     // Block-storage disk for MySQL (LVM PV for vg_data).
     const dataDisk = new lightsail.CfnDisk(this, 'MysqlDataDisk', {
       diskName: mysqlDiskName,
@@ -98,7 +105,12 @@ export class GhostLightsailStack extends cdk.Stack {
       .replace(/__MYSQL_DISK_PATH__/g, mysqlDiskPath)
       .replace(/__CONTENT_DISK_PATH__/g, contentDiskPath)
       .replace(/__JOURNAL_DOMAIN__/g, props.journalDomainName)
-      .replace(/__ACME_EMAIL__/g, props.acmeEmail);
+      .replace(/__ACME_EMAIL__/g, props.acmeEmail)
+      .replace(/__APEX_REDIRECT_DOMAIN__/g, props.apexRedirectDomain ?? '')
+      // Safe to inject before the bucket exists: bucket names are
+      // deterministic (account-namespaced since 2020-era S3 rules), and the
+      // boot script only records it for later pulls.
+      .replace(/__DEPLOYMENT_BUCKET__/g, deploymentBucketName);
 
     const instance = new lightsail.CfnInstance(this, 'GhostInstance', {
       instanceName,
@@ -142,6 +154,19 @@ export class GhostLightsailStack extends cdk.Stack {
     });
     instance.addResourceDependency(dataDisk);
     instance.addResourceDependency(contentDisk);
+
+    // Deployment-resources bucket: private per-env config that shouldn't
+    // live in the public repo. Created *after* the instance so the
+    // resourcesReceivingAccess grant can name it — giving the instance
+    // credential-free read access from the moment the bucket exists.
+    const deploymentBucket = new lightsail.CfnBucket(this, 'DeploymentBucket', {
+      bucketName: deploymentBucketName,
+      bundleId: 'small_1_0',
+      objectVersioning: true,
+      resourcesReceivingAccess: [instanceName],
+      tags: envTags,
+    });
+    deploymentBucket.addResourceDependency(instance);
 
     const staticIp = new lightsail.CfnStaticIp(this, 'GhostStaticIp', {
       staticIpName,
@@ -196,6 +221,10 @@ export class GhostLightsailStack extends cdk.Stack {
       },
     });
 
+    new cdk.CfnOutput(this, 'DeploymentBucketName', {
+      value: deploymentBucketName,
+      description: 'Lightsail bucket for private per-env deployment configuration',
+    });
     new cdk.CfnOutput(this, 'MediaBucketName', { value: mediaBucket.bucketName });
     new cdk.CfnOutput(this, 'MediaDistributionDomain', {
       value: mediaDistribution.distributionDomainName,

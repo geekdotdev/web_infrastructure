@@ -6,6 +6,12 @@ import { GhostLightsailStack } from '../lib/ghost-lightsail-stack';
 
 interface EnvConfig {
   account: string;
+  /**
+   * AWS CLI profile for this env. Credential selection happens in the CDK
+   * *CLI*, not this app, so deployment/deploy.sh reads this as the default
+   * --profile when none is passed on the command line.
+   */
+  profile?: string;
   region?: string;
   /** Ghost journal subdomain: same as the env label, except prod = "www". */
   journalSubdomain?: string;
@@ -19,6 +25,14 @@ interface EnvConfig {
   mediaCertificateArn?: string;
   /** Email Caddy registers with Let's Encrypt for the journal's TLS cert. */
   acmeEmail?: string;
+  /**
+   * MySQL root password for the compose stack. Lives only in this local,
+   * gitignored file. NOT consumed by CDK/user data: deployment/deploy.sh
+   * pushes it to the deployment bucket post-deploy (as mysql.env) and the
+   * instance pulls it at boot — it never appears in the CFN template.
+   * Validated here for fail-fast at synth.
+   */
+  mysqlRootPassword?: string;
 }
 
 const ENV_FILE = path.join(__dirname, '..', 'environments.json');
@@ -72,6 +86,19 @@ if (!envConfig.acmeEmail) {
   );
 }
 
+// MySQL root password: required, local-only, and must be sane.
+if (!envConfig.mysqlRootPassword || envConfig.mysqlRootPassword.length < 16) {
+  throw new Error(
+    `Missing or too-short "mysqlRootPassword" (min 16 chars) for env "${envLabel}" in environments.json.`,
+  );
+}
+if (!/^[A-Za-z0-9]+$/.test(envConfig.mysqlRootPassword)) {
+  throw new Error(
+    `"mysqlRootPassword" for env "${envLabel}" must be alphanumeric only — ` +
+      `it is embedded in a shell heredoc and compose env file, where special characters break quoting.`,
+  );
+}
+
 // --- CloudFront signing key (public half only; keys/ is gitignored) --------
 const publicKeyPath = path.join(__dirname, '..', 'keys', `${envLabel}-public.pem`);
 if (!fs.existsSync(publicKeyPath)) {
@@ -94,6 +121,10 @@ new GhostLightsailStack(app, `GhostLightsailStack-${envLabel}`, {
   envLabel,
   journalSubdomain,
   journalDomainName: `${journalSubdomain}.${APEX_DOMAIN}`,
+  // Bare-apex redirect (geek.dev -> www.geek.dev): prod only, since the
+  // apex can only point at one environment. Caddy auto-issues the apex
+  // cert when this is set; requires an apex A record to the static IP.
+  apexRedirectDomain: envLabel === 'prod' ? APEX_DOMAIN : '',
   acmeEmail: envConfig.acmeEmail,
   mediaSubdomain,
   mediaDomainName: `${mediaSubdomain}.${APEX_DOMAIN}`,

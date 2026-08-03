@@ -36,7 +36,7 @@ done
 
 echo
 echo "Create this CNAME in the ${APEX_DOMAIN} hosted zone (root account):"
-echo "$RECORD" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(f"  {r[\"Name\"]}  CNAME  {r[\"Value\"]}")'
+echo "$RECORD" | python3 -c "import json,sys; r=json.load(sys.stdin); print('  {}  CNAME  {}'.format(r['Name'], r['Value']))"
 echo
 echo "Leave the record in place permanently — ACM uses it to auto-renew."
 echo "Waiting for validation (ctrl-c is safe; issuance continues server-side)..."
