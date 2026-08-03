@@ -53,7 +53,7 @@ Remaining work to get media fully flowing: bucket → Ghost storage adapter → 
 
 ## 5. Verify
 
-- [ ] `deployment/deploy.sh <env>` runs clean end-to-end (incl. artifact push)
+- [ ] `deployment/deploy.py <env>` runs clean end-to-end (incl. artifact push)
 - [ ] `scripts/check-cert.sh <journalSubdomain>.geek.dev` and `scripts/check-cert.sh cfmedia-<env>.geek.dev` both green
 - [ ] Upload an image in Ghost admin → confirm it lands in the media bucket and serves from `cfmedia-<env>.geek.dev`
 - [ ] Confirm a direct S3 URL for the same object returns 403 (OAC working)

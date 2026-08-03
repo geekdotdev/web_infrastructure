@@ -8,7 +8,7 @@ interface EnvConfig {
   account: string;
   /**
    * AWS CLI profile for this env. Credential selection happens in the CDK
-   * *CLI*, not this app, so deployment/deploy.sh reads this as the default
+   * *CLI*, not this app, so deployment/deploy.py reads this as the default
    * --profile when none is passed on the command line.
    */
   profile?: string;
@@ -27,7 +27,7 @@ interface EnvConfig {
   acmeEmail?: string;
   /**
    * MySQL root password for the compose stack. Lives only in this local,
-   * gitignored file. NOT consumed by CDK/user data: deployment/deploy.sh
+   * gitignored file. NOT consumed by CDK/user data: deployment/deploy.py
    * pushes it to the deployment bucket post-deploy (as mysql.env) and the
    * instance pulls it at boot — it never appears in the CFN template.
    * Validated here for fail-fast at synth.

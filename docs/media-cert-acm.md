@@ -37,7 +37,7 @@ static config that every subsequent deploy consumes.
    "mediaCertificateArn": "arn:aws:acm:us-east-1:<account>:certificate/<id>"
    ```
 
-5. Deploy: `deployment/deploy.sh <env>`. The stack attaches the alias
+5. Deploy: `deployment/deploy.py <env>`. The stack attaches the alias
    (`cfmedia-<env>.geek.dev`) and cert to the distribution (TLS 1.2, SNI).
 
 6. In the root account's zone, CNAME `cfmedia-<env>.geek.dev` to the

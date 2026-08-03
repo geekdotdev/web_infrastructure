@@ -29,7 +29,7 @@ covers the conditions that must hold and how to verify.
 
 ## Steps (per environment)
 
-1. Deploy the env: `deployment/deploy.sh <env>`.
+1. Deploy the env: `deployment/deploy.py <env>`.
 2. Create the A record(s) in the root account's `geek.dev` zone (see above).
    Until DNS exists, Caddy retries issuance quietly in the background —
    expected, not an error.

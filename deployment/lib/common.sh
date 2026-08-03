@@ -20,7 +20,7 @@ log() { echo ">>> [$ENV_LABEL] $*"; }
 # already in $PROFILE, or the env's "profile" attribute in environments.json.
 # No fallback to the default credential chain — wrong-account accidents are
 # the failure mode this pipeline exists to prevent. Every entry point
-# (deploy.sh, destroy.sh, ...) must call this before touching AWS, including
+# (destroy.sh, ...) must call this before touching AWS, including
 # calls made indirectly via `cdk` (profile is a CLI-level concept the CDK
 # app itself cannot supply).
 resolve_profile() {

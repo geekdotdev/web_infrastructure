@@ -164,7 +164,7 @@ for i in $(seq 1 30); do
 done
 if [ "$SYNC_OK" != "1" ]; then
   echo "FATAL: required deployment artifacts missing after 15 minutes: $REQUIRED_FILES"
-  echo "Run the deploy pipeline's push stage (deployment/deploy.sh) and re-run provisioning."
+  echo "Run the deploy pipeline's push stage (deployment/deploy.py) and re-run provisioning."
   exit 1
 fi
 chmod -R go-rwx "$PRIVATE_CONFIG_DIR"

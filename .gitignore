@@ -7,6 +7,11 @@ cdk.out/
 .cdk.staging/
 .env
 
+# Python bytecode cache (deployment/deploy.py); regenerated automatically,
+# never worth committing.
+__pycache__/
+*.pyc
+
 # Local account-number -> environment mapping; never commit.
 environments.json
 

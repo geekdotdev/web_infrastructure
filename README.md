@@ -85,11 +85,11 @@ npm install
 npx cdk bootstrap -c env=dev --profile dev
 
 # the MVP pipeline (preflight → synth → deploy → post-deploy):
-deployment/deploy.sh dev            # or: npm run deploy dev
-deployment/deploy.sh prod prod-admin --require-approval never
+deployment/deploy.py dev            # or: npm run deploy dev
+deployment/deploy.py prod --profile prod-admin -- --require-approval never
 ```
 
-`deployment/deploy.sh <env> [aws-profile] [extra cdk args...]` validates `environments.json` and the env's signing key, type-checks, synths, deploys, pushes private artifacts, and writes stack outputs to `deployment/outputs/<env>.json` (gitignored). The AWS profile is **required**: pass it as the second argument or set the env's `profile` attribute in `environments.json` — the script refuses to fall back to the default credential chain, and verifies the profile exists in `~/.aws/config` or `~/.aws/credentials`.
+`deployment/deploy.py <env> [--profile NAME] [-- extra cdk args...]` validates `environments.json` and the env's signing key, type-checks, synths, deploys, pushes private artifacts, and writes stack outputs to `deployment/outputs/<env>.json` (gitignored). The AWS profile is **required**: pass `--profile` or set the env's `profile` attribute in `environments.json` — the script refuses to fall back to the default credential chain, and verifies the profile exists in `~/.aws/config` or `~/.aws/credentials`. Despite living in `deployment/`, this script is Python, not bash (see the file header for why) — extra args meant for `cdk deploy` go after a literal `--`.
 
 ### Private configuration pipeline
 
