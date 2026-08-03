@@ -100,14 +100,15 @@ there); or `/srv/ghost/caddy-data` was wiped, which can trip Let's Encrypt's
 weekly rate limit on repeated issuance for the same name (see
 `docs/destroy-and-restart.md`).
 
-### DNS was wrong, then fixed — Caddy still hasn't picked it up
+### DNS was wrong or added late — Caddy still hasn't picked it up
 
-If Caddy started (or kept retrying) while DNS pointed at the wrong IP, it's
-now on its own exponential backoff schedule for retrying — per Caddy's docs,
-that can be anywhere from a brief pause up to **1 day between attempts, for
-up to 30 days** before it gives up. It does *not* re-check sooner just
-because DNS is now correct; it waits for its own clock. Once DNS is fixed,
-force an immediate retry instead of waiting:
+If Caddy started (or kept retrying) before the A record existed, or while it
+pointed at the wrong IP, it's now on its own exponential backoff schedule for
+retrying — per Caddy's docs, that can be anywhere from a brief pause up to
+**1 day between attempts, for up to 30 days** before it gives up. It does
+*not* re-check sooner just because DNS is now correct; it waits for its own
+clock. **Reminder:** once DNS is in place, SSH in (Lightsail console →
+Connect) and force an immediate retry instead of waiting: 
 
 ```sh
 cd /srv/ghost && sudo podman-compose restart caddy
