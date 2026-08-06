@@ -188,6 +188,30 @@ EOF
   chmod 600 "$APP_DIR/.env"
 fi
 
+# SES SMTP credentials (optional — mail.env is not in REQUIRED_FILES, so
+# envs without SES set up yet simply keep Ghost's Direct mail transport).
+# Unlike the MySQL root password these can legitimately rotate, so this
+# re-syncs on every provisioning run instead of gating on .env pre-existing.
+if [ -s "$PRIVATE_CONFIG_DIR/mail.env" ]; then
+  SES_SMTP_HOST=$(grep -E '^SES_SMTP_HOST=' "$PRIVATE_CONFIG_DIR/mail.env" | head -1 | cut -d= -f2-)
+  SES_SMTP_USERNAME=$(grep -E '^SES_SMTP_USERNAME=' "$PRIVATE_CONFIG_DIR/mail.env" | head -1 | cut -d= -f2-)
+  SES_SMTP_PASSWORD=$(grep -E '^SES_SMTP_PASSWORD=' "$PRIVATE_CONFIG_DIR/mail.env" | head -1 | cut -d= -f2-)
+  if [ -n "$SES_SMTP_HOST" ] && [ -n "$SES_SMTP_USERNAME" ] && [ -n "$SES_SMTP_PASSWORD" ]; then
+    sed -i '/^MAIL_TRANSPORT=/d;/^SES_SMTP_HOST=/d;/^SES_SMTP_USERNAME=/d;/^SES_SMTP_PASSWORD=/d' "$APP_DIR/.env"
+    cat >> "$APP_DIR/.env" <<EOF
+MAIL_TRANSPORT=SMTP
+SES_SMTP_HOST=$SES_SMTP_HOST
+SES_SMTP_USERNAME=$SES_SMTP_USERNAME
+SES_SMTP_PASSWORD=$SES_SMTP_PASSWORD
+EOF
+    echo "SES SMTP credentials found in mail.env — mail transport set to SMTP"
+  else
+    echo "mail.env present but incomplete — leaving mail transport as Direct"
+  fi
+else
+  echo "no mail.env synced — Ghost mail transport stays Direct"
+fi
+
 # Caddy terminates TLS for the journal domain: auto-obtains and renews a
 # Let's Encrypt cert once DNS points here. /data must persist across
 # restarts or Caddy re-requests certs (rate-limit risk).
@@ -234,7 +258,7 @@ services:
       - $MYSQL_MOUNT:/var/lib/mysql
 
   ghost:
-    image: docker.io/library/ghost:5
+    image: docker.io/library/ghost:6.56.0
     restart: always
     depends_on:
       - mysql
@@ -245,6 +269,13 @@ services:
       database__connection__user: ghost
       database__connection__password: \${MYSQL_GHOST_PASSWORD}
       database__connection__database: ghost
+      # Falls back to Direct (Ghost's file default) when SES creds haven't
+      # been synced for this env — \${VAR:-default} is podman-compose's own
+      # substitution, resolved before the container ever starts.
+      mail__transport: \${MAIL_TRANSPORT:-Direct}
+      mail__options__host: \${SES_SMTP_HOST:-}
+      mail__options__auth__user: \${SES_SMTP_USERNAME:-}
+      mail__options__auth__pass: \${SES_SMTP_PASSWORD:-}
     volumes:
       - $CONTENT_MOUNT:/var/lib/ghost/content
       # Config from the repo (staged to /etc/ghost by provisioning). Ghost

@@ -13,7 +13,12 @@
     }
   },
   "mail": {
-    "transport": "Direct"
+    "transport": "SMTP",
+    "from": "\"Geek.dev\" <noreply@mail.geek.dev>",
+    "options": {
+      "port": 587,
+      "secure": false
+    }
   },
   "logging": {
     "transports": [

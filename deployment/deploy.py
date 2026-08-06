@@ -139,6 +139,24 @@ def push_artifacts(env_label: str, profile: str, environments: dict) -> None:
         mysql_env.write_text(f"MYSQL_ROOT_PASSWORD={pw}\n")
         mysql_env.chmod(0o600)
 
+        # Optional: SES SMTP credentials. Not required — envs without SES set
+        # up yet simply keep Ghost's Direct mail transport (see user-data.sh).
+        env_cfg = environments.get(env_label, {})
+        ses_host = env_cfg.get("sesSmtpHost")
+        ses_user = env_cfg.get("sesSmtpUsername")
+        ses_pass = env_cfg.get("sesSmtpPassword")
+        if ses_host and ses_user and ses_pass:
+            mail_env = stage_dir / "mail.env"
+            mail_env.write_text(
+                f"SES_SMTP_HOST={ses_host}\n"
+                f"SES_SMTP_USERNAME={ses_user}\n"
+                f"SES_SMTP_PASSWORD={ses_pass}\n"
+            )
+            mail_env.chmod(0o600)
+            log(env_label, "including SES SMTP credentials (mail.env)")
+        else:
+            log(env_label, "no SES SMTP credentials in environments.json — mail stays on Direct transport")
+
         # Optional extra private artifacts: private-config/<env>/ (gitignored).
         extra_dir = REPO_ROOT / "private-config" / env_label
         if extra_dir.is_dir():

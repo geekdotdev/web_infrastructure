@@ -32,6 +32,25 @@ export interface GhostLightsailStackProps extends cdk.StackProps {
    * default domain; with it the custom domain is attached.
    */
   readonly mediaCertificateArn?: string;
+  /** Sending-email subdomain for this env ("mail" for prod, "<env>mail" otherwise). */
+  readonly mailSubdomain: string;
+  /**
+   * Full sending-email domain (e.g. mail.geek.dev). Used as the SES identity
+   * + custom MAIL FROM domain for Ghost's transactional mail. Not wired to
+   * any CDK resource — SES identity verification is manual/cross-account,
+   * same reasoning as the media cert (see docs/media-cert-acm.md).
+   */
+  readonly mailDomainName: string;
+  /** SES MAIL FROM subdomain label, relative to mailDomainName (e.g. "bounce"). */
+  readonly mailFromSubdomain: string;
+  /**
+   * Full MAIL FROM domain (e.g. bounce.mail.geek.dev). Must be a strict
+   * subdomain of mailDomainName — SES rejects it if equal to the identity
+   * itself. Needs its own MX (-> feedback-smtp.<region>.amazonses.com) and
+   * SPF TXT record, separate from the identity's DKIM records. Not wired to
+   * any CDK resource; same manual/cross-account reasoning as mailDomainName.
+   */
+  readonly mailFromDomainName: string;
   /** Lightsail bundle (instance size), e.g. 'medium_3_0' (2 vCPU / 4 GB). */
   readonly bundleId?: string;
   /** Lightsail blueprint (OS image). */
@@ -253,6 +272,14 @@ export class GhostLightsailStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MediaSubdomain', {
       value: props.mediaSubdomain,
       description: 'CNAME <mediaSubdomain>.<your-domain> to the CloudFront distribution',
+    });
+    new cdk.CfnOutput(this, 'MailSubdomain', {
+      value: props.mailSubdomain,
+      description: 'SES sending identity for transactional email (needs DKIM CNAMEs)',
+    });
+    new cdk.CfnOutput(this, 'MailFromDomain', {
+      value: props.mailFromDomainName,
+      description: 'SES custom MAIL FROM domain — needs an MX (-> feedback-smtp.<region>.amazonses.com) and SPF TXT record',
     });
     new cdk.CfnOutput(this, 'SshHint', {
       value: 'Port 22 is not publicly exposed; use browser SSH in the Lightsail console (Connect tab)',

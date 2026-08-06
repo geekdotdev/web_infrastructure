@@ -18,6 +18,24 @@ interface EnvConfig {
   /** CloudFront media subdomain: "cfmedia-<env>". */
   mediaSubdomain?: string;
   /**
+   * Sending-email subdomain for this env: SES identity + custom MAIL FROM
+   * domain for Ghost's transactional mail (password resets, staff invites,
+   * member sign-in links). "mail" for prod, "<env>mail" otherwise. Not
+   * consumed by any CDK resource yet — SES identity verification is manual,
+   * cross-account DNS just like the media cert (see docs/media-cert-acm.md);
+   * this just fixes the domain name so config/docs/Ghost mail settings agree.
+   */
+  mailSubdomain?: string;
+  /**
+   * SES custom MAIL FROM subdomain label, relative to mailSubdomain (not the
+   * apex). SES requires the MAIL FROM domain to be a strict subdomain of the
+   * identity — it can never equal the identity itself — so this nests one
+   * level deeper, e.g. "bounce" -> bounce.mail.geek.dev for prod. Used for
+   * the Return-Path/bounce-handling MX + SPF records, distinct from the
+   * identity's own DKIM records on mailDomainName.
+   */
+  mailFromSubdomain?: string;
+  /**
    * ACM certificate ARN covering cfmedia-<env>.geek.dev (must live in
    * us-east-1). Until provided, the distribution serves from its default
    * *.cloudfront.net domain; once set, the custom-domain alias is attached.
@@ -77,6 +95,15 @@ if (!envConfig?.account) {
 const journalSubdomain =
   envConfig.journalSubdomain ?? (envLabel === 'prod' ? 'www' : envLabel);
 const mediaSubdomain = envConfig.mediaSubdomain ?? `cfmedia-${envLabel}`;
+// Sending-email subdomain: "mail" for prod, "<env>mail" otherwise (e.g. "devmail").
+const mailSubdomain =
+  envConfig.mailSubdomain ?? (envLabel === 'prod' ? 'mail' : `${envLabel}mail`);
+const mailDomainName = `${mailSubdomain}.${APEX_DOMAIN}`;
+// MAIL FROM must be a strict subdomain of the identity (mailDomainName), never
+// equal to it — same "bounce" label works fine nested under any env's mail
+// domain since mailDomainName itself already varies per env.
+const mailFromSubdomain = envConfig.mailFromSubdomain ?? 'bounce';
+const mailFromDomainName = `${mailFromSubdomain}.${mailDomainName}`;
 
 // Caddy terminates TLS for the journal and needs an ACME registration email.
 if (!envConfig.acmeEmail) {
@@ -129,6 +156,10 @@ new GhostLightsailStack(app, `GhostLightsailStack-${envLabel}`, {
   mediaSubdomain,
   mediaDomainName: `${mediaSubdomain}.${APEX_DOMAIN}`,
   mediaCertificateArn: envConfig.mediaCertificateArn,
+  mailSubdomain,
+  mailDomainName,
+  mailFromSubdomain,
+  mailFromDomainName,
   mediaPublicKeyPem,
   // Ghost + MySQL need headroom; medium = 2 vCPU / 4 GB RAM.
   bundleId: 'medium_3_0',

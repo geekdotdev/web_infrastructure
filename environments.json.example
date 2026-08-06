@@ -4,6 +4,7 @@
     "region": "us-east-1",
     "journalSubdomain": "dev",
     "mediaSubdomain": "cfmedia-dev",
+    "mailSubdomain": "devmail",
     "acmeEmail": "you@example.com"
   },
   "qa": {
@@ -11,6 +12,7 @@
     "region": "us-east-1",
     "journalSubdomain": "qa",
     "mediaSubdomain": "cfmedia-qa",
+    "mailSubdomain": "qamail",
     "acmeEmail": "you@example.com"
   },
   "prod": {
@@ -19,6 +21,12 @@
     "region": "us-east-1",
     "journalSubdomain": "www",
     "mediaSubdomain": "cfmedia-prod",
-    "acmeEmail": "you@example.com"
+    "mediaCertificateArn": "arn:aws:acm:us-east-1:...",
+    "mailFromSubdomain": "mail",
+    "acmeEmail": "you@example.com",
+    "mysqlRootPassword": "xxxxxx",
+    "sesSmtpHost": "email-smtp.us-west-2.amazonaws.com",
+    "sesSmtpUsername": "AKIA...",
+    "sesSmtpPassword": "..."
   }
 }

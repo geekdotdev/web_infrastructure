@@ -37,12 +37,16 @@ cp environments.json.example environments.json   # then fill in real account num
 
 Every resource name is suffixed with the env label (`ghost-cms-dev`, `ghost-mysql-data-dev`, ...), and the stack is named `GhostLightsailStack-<env>`. The env label is a **required** CLI arg — synth/deploy fail without it.
 
-Each env also carries two subdomain attributes (conventions applied automatically if omitted from `environments.json`):
+Each env also carries three subdomain attributes (conventions applied automatically if omitted from `environments.json`):
 
 - `journalSubdomain` — the Ghost site; env label, except prod uses `www`. Point `<journalSubdomain>.<your-domain>` at the env's static IP.
 - `mediaSubdomain` — the CloudFront media host; `cfmedia-<env>`. Combined with the apex domain (the `APEX_DOMAIN` const in `bin/web_infrastructure.ts`, currently `geek.dev`) this yields the distribution's custom domain, e.g. `cfmedia-dev.geek.dev`.
+- `mailSubdomain` — the SES sending identity for Ghost's transactional mail (password resets, staff invites, member sign-in links): `mail` for prod, `<env>mail` otherwise (e.g. `devmail`). Needs 3 DKIM CNAME records once verified in SES.
+- `mailFromSubdomain` — the SES custom MAIL FROM label, relative to `mailSubdomain`: `bounce` by default (e.g. `bounce.mail.geek.dev` for prod). SES requires the MAIL FROM domain to be a *strict* subdomain of the identity — it can never equal `mailSubdomain` itself — so this always nests one level deeper. Needs its own MX (→ `feedback-smtp.<region>.amazonses.com`) and SPF TXT record, separate from the identity's DKIM records.
 
-Both are emitted as stack outputs.
+Like the media cert, SES identity/MAIL FROM verification is manual and cross-account (DNS lives in the root account) and deliberately not CDK-managed. Not yet consumed by the compose stack; wiring Ghost's `mail` config to use it is a follow-up once SES is verified per env.
+
+All four subdomain values are emitted as stack outputs.
 
 Step-by-step cert guides: [docs/media-cert-acm.md](docs/media-cert-acm.md) (manual, once per env) and [docs/journal-cert-letsencrypt.md](docs/journal-cert-letsencrypt.md) (automatic via Caddy).
 
@@ -95,10 +99,10 @@ deployment/deploy.py prod --profile prod-admin -- --require-approval never
 
 Secrets reach the instance in four stages, never touching the CloudFormation template:
 
-1. **Source** — `mysqlRootPassword` in `environments.json` (local, gitignored), plus any files in `private-config/<env>/` (gitignored).
-2. **Push** — after `cdk deploy`, the pipeline stages `mysql.env` (+ `private-config/<env>/*`) and uploads them to the deployment bucket using an ephemeral Lightsail bucket access key (created → used → deleted).
-3. **Pull** — instance first boot syncs the bucket to `/etc/ghost/private/` (owner-only perms), blocking until every **required file** (`mysql.env`; the list is the `REQUIRED_FILES` var in `assets/user-data.sh`) is present — retries every 30s for up to 15 minutes, then fails the provision loudly.
-4. **Consume** — `/srv/ghost/.env` takes the root password from the synced `mysql.env`; the ghost DB-user password is still generated on-box. MySQL only uses the root password when initializing an empty datadir; rotating it later means `ALTER USER` on the box, not a redeploy. Its phases are functions, intended to grow into the full pipeline (artifact push to the deployment bucket, smoke tests, DNS checks).
+1. **Source** — `mysqlRootPassword` and (optionally) `sesSmtpHost`/`sesSmtpUsername`/`sesSmtpPassword` in `environments.json` (local, gitignored), plus any files in `private-config/<env>/` (gitignored).
+2. **Push** — after `cdk deploy`, the pipeline stages `mysql.env` (+ `mail.env` if SES credentials are present + `private-config/<env>/*`) and uploads them to the deployment bucket using an ephemeral Lightsail bucket access key (created → used → deleted).
+3. **Pull** — instance first boot syncs the bucket to `/etc/ghost/private/` (owner-only perms), blocking until every **required file** (`mysql.env`; the list is the `REQUIRED_FILES` var in `assets/user-data.sh`) is present — retries every 30s for up to 15 minutes, then fails the provision loudly. `mail.env` is synced the same way but isn't required — its absence just means Ghost stays on the `Direct` mail transport.
+4. **Consume** — `/srv/ghost/.env` takes the root password from the synced `mysql.env`; the ghost DB-user password is still generated on-box. MySQL only uses the root password when initializing an empty datadir; rotating it later means `ALTER USER` on the box, not a redeploy. If `mail.env` is present, its SES SMTP host/username/password are written into `.env` too, and `docker-compose.yml`'s `mail__*` environment entries switch Ghost from `Direct` to `SMTP` — unlike the MySQL password this block re-syncs on every provisioning run, since SMTP credentials can legitimately rotate. Its phases are functions, intended to grow into the full pipeline (artifact push to the deployment bucket, smoke tests, DNS checks).
 
 Deploy one environment at a time; credentials must match the account pinned in `environments.json` — CDK refuses otherwise.
 
